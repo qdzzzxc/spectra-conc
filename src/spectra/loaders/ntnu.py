@@ -28,6 +28,9 @@ INFO_COLS = {"Glucose (mM)": "glucose", "Lactate (mM)": "lactate", "Acetaminophe
              "Kuvette": "cuvette", "Day": "day", "Run": "run"}
 CONC_COLS = ["glucose", "lactate", "acetaminophen", "caffeine", "ethanol"]
 
+# рабочие окна: без видимой области, насыщения ~1940 нм и шумного края >2400 нм
+WORK_WINDOWS: list[tuple[float, float]] = [(1100.0, 1880.0), (2050.0, 2400.0)]
+
 
 def _read_raw(split: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     """Читает сырой файл сплита. Возвращает (info, wl, X).
@@ -56,13 +59,36 @@ def _add_structure(info: pd.DataFrame, split: str) -> pd.DataFrame:
     return out
 
 
-def load(split: str = "calibration", wl_min: float | None = None, wl_max: float | None = None) -> SpectraDataset:
+def _resolve_windows(windows: list[tuple[float, float]] | str | None) -> list[tuple[float, float]] | None:
+    """Приводит аргумент windows к списку кортежей (float, float).
+
+    "work" — WORK_WINDOWS, другая строка -> ValueError, список списков (напр. из JSON) —
+    к списку кортежей, None -> None.
+    """
+    if windows is None:
+        return None
+    if isinstance(windows, str):
+        if windows != "work":
+            raise ValueError(f"Неизвестное имя окон: {windows!r} (доступно только 'work')")
+        return list(WORK_WINDOWS)
+    return [(float(lo), float(hi)) for lo, hi in windows]
+
+
+def load(
+    split: str = "calibration",
+    wl_min: float | None = None,
+    wl_max: float | None = None,
+    windows: list[tuple[float, float]] | str | None = None,
+) -> SpectraDataset:
     """Загружает датасет NTNU как SpectraDataset.
 
     split ∈ {"calibration", "validation", "all"}; "all" — калибровка затем валидация
     (блоки валидации сдвигаются, чтобы не пересекались с калибровкой).
-    wl_min/wl_max — обрезка диапазона длин волн. y = glucose (мМ),
-    groups = фактор по составу раствора (см. docstring модуля).
+    wl_min/wl_max — обрезка диапазона длин волн.
+    windows — окна длин волн: "work" (WORK_WINDOWS), список пар [lo, hi] (границы
+    включительно, канал попадает если попал хотя бы в одно окно) или None;
+    применяются вместе с wl_min/wl_max (логическое И).
+    y = glucose (мМ), groups = фактор по составу раствора (см. docstring модуля).
     """
     if split == "all":
         parts: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]] = []
@@ -83,8 +109,17 @@ def load(split: str = "calibration", wl_min: float | None = None, wl_max: float 
         mask &= wl >= wl_min
     if wl_max is not None:
         mask &= wl <= wl_max
+    resolved_windows = _resolve_windows(windows)
+    if resolved_windows is not None:
+        win_mask = np.zeros(len(wl), dtype=bool)
+        for lo, hi in resolved_windows:
+            win_mask |= (wl >= lo) & (wl <= hi)
+        mask &= win_mask
+    if not mask.any():
+        raise ValueError("После фильтра по длинам волн не осталось ни одного канала")
     wl, X = wl[mask], X[:, mask]
 
     y = meta["glucose"].to_numpy(dtype=float)
     groups = pd.factorize(meta["composition"])[0]
-    return SpectraDataset(X=X, wl=wl, y=y, groups=groups, meta=meta, name=f"ntnu_{split}")
+    name = f"ntnu_{split}_win" if resolved_windows is not None else f"ntnu_{split}"
+    return SpectraDataset(X=X, wl=wl, y=y, groups=groups, meta=meta, name=name)

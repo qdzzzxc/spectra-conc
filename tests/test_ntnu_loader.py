@@ -58,3 +58,29 @@ def test_wl_range():
 def test_bad_split():
     with pytest.raises(KeyError):
         load("bad")
+
+
+def test_windows_work():
+    from spectra.loaders.ntnu import WORK_WINDOWS
+
+    ds = load("calibration", windows="work")
+    in_win = np.zeros(len(ds.wl), dtype=bool)
+    for lo, hi in WORK_WINDOWS:
+        in_win |= (ds.wl >= lo) & (ds.wl <= hi)
+    assert in_win.all()
+    assert not ((ds.wl > 1880) & (ds.wl < 2050)).any()
+    assert ds.X.shape[1] == len(ds.wl)
+    assert ds.name == "ntnu_calibration_win"
+
+
+def test_windows_list_of_lists():
+    ds = load("calibration", windows=[[1200, 1300]])
+    assert ds.wl.min() == 1200.0 and ds.wl.max() == 1300.0
+    assert len(ds.wl) == 201
+
+
+def test_windows_bad():
+    with pytest.raises(ValueError):
+        load("calibration", windows="bad")
+    with pytest.raises(ValueError):
+        load("calibration", windows=[(3000, 4000)])
