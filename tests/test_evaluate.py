@@ -41,3 +41,14 @@ def test_run_grid_fold_stats():
     assert np.isfinite(std) and std >= 0
     assert row["seed"] == 7
     assert set(oof["fold"].unique()) <= {0, 1, 2}
+
+
+def test_extrapolation_split_with_ties():
+    """Много групп на максимальной концентрации: тест экстраполяции не должен быть пустым."""
+    from spectra.evaluate import extrapolation_split
+    ds = make_synthetic(n_solutions=15, seed=5)
+    top = np.isin(ds.groups, np.arange(5))
+    ds.y[top] = ds.y.max()  # 5 из 15 групп на одном максимальном уровне -> квантиль 0.8 равен максимуму
+    te, pred = extrapolation_split(ds, "pls", "raw")
+    assert te.sum() > 0 and len(pred) == te.sum()
+    assert set(ds.groups[te]) & set(ds.groups[~te]) == set()

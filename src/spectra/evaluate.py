@@ -46,8 +46,10 @@ def extrapolation_split(ds: SpectraDataset, model: str, prep: str, top_frac=0.2,
     Показывает, умеет ли модель выходить за диапазон калибровки (деревья - нет)."""
     g = pd.DataFrame({"g": ds.groups, "y": ds.y}).groupby("g")["y"].mean()
     thr = g.quantile(1 - top_frac)
-    test_groups = g.index[g > thr]
+    test_groups = g.index[g >= thr]  # >=: при повторяющихся максимальных концентрациях «>» даёт пустой тест
     te = np.isin(ds.groups, test_groups); tr = ~te
+    if not te.any() or not tr.any():
+        raise ValueError(f"Пустой train или test в тесте экстраполяции (порог {thr:.3g})")
     pipe, grid = build(model, prep, ds.X.shape[1], n_train=int(tr.sum()))
     est = _fit_with_inner_cv(pipe, grid, ds.X[tr], ds.y[tr], ds.groups[tr], seed=seed)
     pred = est.predict(ds.X[te])

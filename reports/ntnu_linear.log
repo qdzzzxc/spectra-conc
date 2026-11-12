@@ -1,0 +1,57 @@
+ntnu_calibration_win: n=273, p=2262, groups=56, wl=[1100.0,2400.0], y=[0,50]
+     raw       pls  RMSE=2.176 ±0.899 R2=0.9858
+     raw     ridge  RMSE=2.089 ±0.995 R2=0.9869
+     raw pcr_ridge  RMSE=2.087 ±1.033 R2=0.9869
+     raw       svr  RMSE=4.468 ±1.656 R2=0.9400
+     raw       gpr  RMSE=2.073 ±1.003 R2=0.9871
+     snv       pls  RMSE=1.995 ±0.931 R2=0.9880
+     snv     ridge  RMSE=2.027 ±0.948 R2=0.9876
+     snv pcr_ridge  RMSE=2.117 ±0.931 R2=0.9865
+     snv       svr  RMSE=3.635 ±1.146 R2=0.9603
+     snv       gpr  RMSE=2.192 ±0.851 R2=0.9856
+     msc       pls  RMSE=1.990 ±0.925 R2=0.9881
+     msc     ridge  RMSE=2.033 ±0.955 R2=0.9876
+     msc pcr_ridge  RMSE=2.053 ±1.011 R2=0.9873
+     msc       svr  RMSE=3.642 ±1.133 R2=0.9601
+     msc       gpr  RMSE=2.202 ±0.843 R2=0.9854
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg1       pls  RMSE=2.383 ±0.817 R2=0.9829
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg1     ridge  RMSE=2.070 ±0.861 R2=0.9871
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg1 pcr_ridge  RMSE=2.146 ±0.971 R2=0.9861
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg1       svr  RMSE=4.366 ±1.917 R2=0.9427
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg1       gpr  RMSE=2.169 ±0.934 R2=0.9859
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg2       pls  RMSE=5.360 ±0.771 R2=0.9136
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg2     ridge  RMSE=5.021 ±0.283 R2=0.9242
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg2 pcr_ridge  RMSE=11.447 ±1.833 R2=0.6060
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg2       svr  RMSE=11.212 ±1.191 R2=0.6220
+ ** On entry to DLALSD parameter number  4 had an illegal value
+     sg2       gpr  RMSE=11.773 ±1.779 R2=0.5832
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ snv+sg1       pls  RMSE=2.281 ±0.808 R2=0.9844
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ snv+sg1     ridge  RMSE=2.111 ±0.843 R2=0.9866
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ snv+sg1 pcr_ridge  RMSE=2.200 ±1.002 R2=0.9854
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ snv+sg1       svr  RMSE=3.389 ±1.231 R2=0.9655
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ snv+sg1       gpr  RMSE=2.222 ±0.816 R2=0.9852
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ msc+sg1       pls  RMSE=2.281 ±0.807 R2=0.9844
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ msc+sg1     ridge  RMSE=2.105 ±0.846 R2=0.9867
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ msc+sg1 pcr_ridge  RMSE=2.196 ±1.011 R2=0.9855
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ msc+sg1       svr  RMSE=3.390 ±1.231 R2=0.9654
+ ** On entry to DLALSD parameter number  4 had an illegal value
+ msc+sg1       gpr  RMSE=2.224 ±0.814 R2=0.9851
+reports/ntnu_linear_dashboard.html
