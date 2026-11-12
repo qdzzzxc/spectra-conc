@@ -16,7 +16,7 @@ def test_preprocessors_shape():
 
 def test_group_cv_no_leak_and_quality():
     ds = make_synthetic(n_solutions=30, seed=1)
-    oof = nested_group_cv(ds, "pls", "raw", outer_splits=5)
+    oof, _ = nested_group_cv(ds, "pls", "raw", outer_splits=5)
     m = regression_metrics(ds.y, oof)
     assert m["r2"] > 0.9
 
