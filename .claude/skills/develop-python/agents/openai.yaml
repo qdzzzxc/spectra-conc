@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop Python"
+  short_description: "Develop Python with team conventions"
+  default_prompt: "Use $develop-python to implement this Python task according to our team conventions."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop ML Systems"
+  short_description: "Build production ML and LLM systems"
+  default_prompt: "Use $develop-ml-systems to design and implement this ML or LLM system."

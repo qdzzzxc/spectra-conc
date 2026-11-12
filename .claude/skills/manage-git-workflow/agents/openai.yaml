@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Git Workflow"
+  short_description: "Apply team Git and release workflows"
+  default_prompt: "Use $manage-git-workflow to prepare the branch, commits, merge request, version, and changelog."

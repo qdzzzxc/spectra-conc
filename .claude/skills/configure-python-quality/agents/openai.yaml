@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure Python Quality"
+  short_description: "Set up Python linting and quality checks"
+  default_prompt: "Use $configure-python-quality to configure Python quality tooling for this repository."
