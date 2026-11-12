@@ -1,10 +1,14 @@
 """Предобработка спектров как sklearn-трансформеры (работают построчно, без утечки между train/test,
 кроме MSC, у которого эталон = средний спектр обучающей выборки)."""
 from __future__ import annotations
+import re
 import numpy as np
 from scipy.signal import savgol_filter
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline, FunctionTransformer
+
+# sg<deriv>[w<window>]: окно в точках; без w — 11 (как раньше)
+_SG_RE = re.compile(r"^sg([12])(?:w(\d+))?$")
 
 
 class SNV(BaseEstimator, TransformerMixin):
@@ -32,6 +36,9 @@ class MSC(BaseEstimator, TransformerMixin):
 
 
 class SavGol(BaseEstimator, TransformerMixin):
+    """Фильтр Савицкого–Голея по оси длин волн: window — окно в точках (нечётное),
+    poly — степень полинома, deriv — порядок производной."""
+
     def __init__(self, window=11, poly=2, deriv=0):
         self.window, self.poly, self.deriv = window, poly, deriv
     def fit(self, X, y=None):
@@ -51,18 +58,36 @@ def to_absorbance():
     return FunctionTransformer(_absorbance, validate=False)
 
 
+def _parse_sg(token: str) -> SavGol | None:
+    """'sg1' -> SavGol(11, 2, 1), 'sg2w31' -> SavGol(31, 2, 2); не SG-токен -> None.
+    Окно должно быть нечётным и > 2 (степень полинома), иначе ValueError."""
+    m = _SG_RE.match(token)
+    if not m:
+        return None
+    deriv = int(m.group(1))
+    window = int(m.group(2)) if m.group(2) else 11
+    if window % 2 == 0 or window <= 2:
+        raise ValueError(f"Окно SG должно быть нечётным и больше 2: {token}")
+    return SavGol(window, 2, deriv)
+
+
 def get_preprocessor(name: str):
-    """Названия пайплайнов предобработки, которые перебираем в эксперименте."""
-    table = {
-        "raw": lambda: FunctionTransformer(validate=False),
-        "snv": lambda: SNV(),
-        "msc": lambda: MSC(),
-        "sg1": lambda: SavGol(11, 2, 1),
-        "sg2": lambda: SavGol(11, 2, 2),
-        "snv+sg1": lambda: make_pipeline(SNV(), SavGol(11, 2, 1)),
-        "msc+sg1": lambda: make_pipeline(MSC(), SavGol(11, 2, 1)),
-    }
-    return table[name]()
+    """Предобработка по имени: токены raw/snv/msc/sg1/sg2, окно SG — суффикс wN (sg1w31),
+    цепочка через "+" (snv+sg1w31)."""
+    steps = []
+    for token in name.split("+"):
+        if token == "raw":
+            step = FunctionTransformer(validate=False)
+        elif token == "snv":
+            step = SNV()
+        elif token == "msc":
+            step = MSC()
+        else:
+            step = _parse_sg(token)
+            if step is None:
+                raise KeyError(name)
+        steps.append(step)
+    return steps[0] if len(steps) == 1 else make_pipeline(*steps)
 
 
 PREPROCESSORS = ["raw", "snv", "msc", "sg1", "sg2", "snv+sg1", "msc+sg1"]
