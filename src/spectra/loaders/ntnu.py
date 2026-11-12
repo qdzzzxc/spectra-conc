@@ -31,6 +31,9 @@ CONC_COLS = ["glucose", "lactate", "acetaminophen", "caffeine", "ethanol"]
 # рабочие окна: без видимой области, насыщения ~1940 нм и шумного края >2400 нм
 WORK_WINDOWS: list[tuple[float, float]] = [(1100.0, 1880.0), (2050.0, 2400.0)]
 
+# валидация: метка 50 мМ, все модели предсказывают ~25 мМ — вероятная ошибка приготовления/метки в источнике
+SUSPECT_COMPOSITIONS: tuple[str, ...] = ("50.00|15.00|0.15|0.10|34.50", "50.00|15.00|0.15|0.05|69.00")
+
 
 def _read_raw(split: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     """Читает сырой файл сплита. Возвращает (info, wl, X).
@@ -49,13 +52,14 @@ def _read_raw(split: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
 
 
 def _add_structure(info: pd.DataFrame, split: str) -> pd.DataFrame:
-    """Возвращает НОВЫЙ DataFrame с колонками set, composition, block, repeat."""
+    """Возвращает НОВЫЙ DataFrame с колонками set, composition, block, repeat, suspect."""
     out = info.copy()
     out["set"] = split
     out["composition"] = out[CONC_COLS].apply(lambda row: "|".join(f"{v:.2f}" for v in row), axis=1)
     key = out[["composition", "cuvette", "day", "run"]].astype(str).agg("||".join, axis=1)
     out["block"] = ((key != key.shift()).cumsum() - 1).astype(int)
     out["repeat"] = out.groupby("block").cumcount().astype(int)
+    out["suspect"] = out["composition"].isin(SUSPECT_COMPOSITIONS)
     return out
 
 
@@ -79,6 +83,7 @@ def load(
     wl_min: float | None = None,
     wl_max: float | None = None,
     windows: list[tuple[float, float]] | str | None = None,
+    drop_suspect: bool = False,
 ) -> SpectraDataset:
     """Загружает датасет NTNU как SpectraDataset.
 
@@ -89,6 +94,8 @@ def load(
     включительно, канал попадает если попал хотя бы в одно окно) или None;
     применяются вместе с wl_min/wl_max (логическое И).
     y = glucose (мМ), groups = фактор по составу раствора (см. docstring модуля).
+    drop_suspect — исключить подозрительные составы (SUSPECT_COMPOSITIONS) и добавить
+    суффикс "_nosus" к имени, если что-то исключено.
     """
     if split == "all":
         parts: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]] = []
@@ -119,7 +126,18 @@ def load(
         raise ValueError("После фильтра по длинам волн не осталось ни одного канала")
     wl, X = wl[mask], X[:, mask]
 
+    if drop_suspect:
+        keep = ~meta["suspect"].to_numpy()
+        n_dropped = int((~keep).sum())
+        if n_dropped:
+            meta = meta[keep].reset_index(drop=True)
+            X = X[keep]
+    else:
+        n_dropped = 0
+
     y = meta["glucose"].to_numpy(dtype=float)
     groups = pd.factorize(meta["composition"])[0]
     name = f"ntnu_{split}_win" if resolved_windows is not None else f"ntnu_{split}"
+    if n_dropped:
+        name += "_nosus"
     return SpectraDataset(X=X, wl=wl, y=y, groups=groups, meta=meta, name=name)

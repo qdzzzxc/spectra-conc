@@ -84,3 +84,24 @@ def test_windows_bad():
         load("calibration", windows="bad")
     with pytest.raises(ValueError):
         load("calibration", windows=[(3000, 4000)])
+
+
+def test_suspect_flag():
+    ds = load("validation")
+    meta = ds.meta
+    assert meta["suspect"].sum() == 6
+    assert set(meta.loc[meta.suspect, "glucose"]) == {50.0}
+
+
+def test_drop_suspect_validation():
+    ds = load("validation", drop_suspect=True)
+    assert len(ds) == 114
+    assert "suspect" in ds.meta.columns and not ds.meta.suspect.any()
+    assert ds.name.endswith("_nosus")
+    assert ds.X.shape[0] == 114
+
+
+def test_drop_suspect_calibration():
+    ds = load("calibration", drop_suspect=True)
+    assert len(ds) == 273
+    assert not ds.name.endswith("_nosus")

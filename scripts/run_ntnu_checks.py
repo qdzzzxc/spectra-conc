@@ -59,18 +59,27 @@ def _table(df: pd.DataFrame) -> str:
     return df.round(3).to_string(index=False)
 
 
+def _first_col(df: pd.DataFrame, col: str, value: str) -> pd.DataFrame:
+    """Добавляет колонку col со значением value первой колонкой."""
+    out = df.copy()
+    out[col] = value
+    return out[[col] + [c for c in df.columns if c != col]]
+
+
 def plot_learning_curve(lc: pd.DataFrame, pipes: list[tuple[str, str]]) -> pathlib.Path:
-    """Кривая обучения: RMSEP на валидации против числа обучающих составов, среднее по seed и полоса ±std."""
+    """Кривая обучения: RMSEP на валидации против числа обучающих составов для вариантов all/clean."""
     FIGURES.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(10, 5))
-    for pipe in pipes:
-        sub = lc[(lc["model"] == pipe[0]) & (lc["prep"] == pipe[1])]
-        agg = sub.groupby("n_groups")["rmse"].agg(["mean", "std"])
-        x = agg.index.to_numpy(float)
-        mean = agg["mean"].to_numpy()
-        std = np.nan_to_num(agg["std"].to_numpy(), nan=0.0)
-        ax.plot(x, mean, marker="o", label=pipe_label(pipe))
-        ax.fill_between(x, mean - std, mean + std, alpha=0.2)
+    styles = {"all": "--", "clean": "-"}
+    for val_set in ("all", "clean"):
+        for pipe in pipes:
+            sub = lc[(lc["val_set"] == val_set) & (lc["model"] == pipe[0]) & (lc["prep"] == pipe[1])]
+            agg = sub.groupby("n_groups")["rmse"].agg(["mean", "std"])
+            x = agg.index.to_numpy(float)
+            mean = agg["mean"].to_numpy()
+            std = np.nan_to_num(agg["std"].to_numpy(), nan=0.0)
+            ax.plot(x, mean, marker="o", ls=styles[val_set], label=f"{pipe_label(pipe)} ({val_set})")
+            ax.fill_between(x, mean - std, mean + std, alpha=0.2)
     ax.set_xlabel("число составов в обучении, шт")
     ax.set_ylabel("RMSEP на валидации, мМ")
     ax.set_title("Кривая обучения: качество от числа обучающих составов (NTNU)")
@@ -82,29 +91,44 @@ def plot_learning_curve(lc: pd.DataFrame, pipes: list[tuple[str, str]]) -> pathl
     return path
 
 
-def plot_interferents(cal, val, interferents: list[str], pipe: tuple[str, str], seed: int) -> pathlib.Path:
-    """Остаток предсказания против концентрации интерферента для обучения без него и на всей калибровке."""
+def plot_interferents(
+    cal, val, val_clean, interferents: list[str], pipe: tuple[str, str], seed: int
+) -> pathlib.Path:
+    """Остаток предсказания против концентрации интерферента (обучение без него и на всей калибровке).
+
+    Наклоны и точки строятся по чистой валидации; исключённые подозрительные образцы
+    показаны серыми крестиками только для варианта `full`.
+    """
     FIGURES.mkdir(parents=True, exist_ok=True)
     colors = {"without": "tab:blue", "full": "tab:red"}
+    suspect_mask = (~val.meta["suspect"].to_numpy(dtype=bool))
     fig, axes = plt.subplots(1, len(interferents), figsize=(5 * len(interferents), 4.5), squeeze=False)
     for ax, interf in zip(axes[0], interferents):
-        conc_val = val.meta[interf].to_numpy(dtype=float)
+        conc_val = val_clean.meta[interf].to_numpy(dtype=float)
         conc_cal = cal.meta[interf].to_numpy(dtype=float)
         for train_set in ("without", "full"):
             train = subset(cal, conc_cal < 0.1) if train_set == "without" else cal
-            pred = fit_predict(train, val.X, pipe, seed=seed)
-            res = pred - val.y
+            pred = fit_predict(train, val_clean.X, pipe, seed=seed)
+            res = pred - val_clean.y
             lr = linregress(conc_val, res)
             xs = np.array([conc_val.min(), conc_val.max()], dtype=float)
             ax.scatter(conc_val, res, s=12, color=colors[train_set], alpha=0.6)
             ax.plot(xs, lr.intercept + lr.slope * xs, color=colors[train_set], lw=1.5,
                     label=f"{train_set}: {lr.slope:.2f} мМ/мМ")
+            if train_set == "full":
+                pred_s = fit_predict(train, val.X, pipe, seed=seed)
+                res_s = pred_s - val.y
+                conc_s = val.meta[interf].to_numpy(dtype=float)[~suspect_mask]
+                res_sus = res_s[~suspect_mask]
+                ax.scatter(conc_s, res_sus, marker="x", color="gray", s=25,
+                           label="подозрительные (исключены)")
         ax.axhline(0.0, color="gray", lw=0.8, ls="--")
         ax.set_xlabel(f"{interf}, мМ")
         ax.set_ylabel("предсказание − глюкоза, мМ")
         ax.set_title(f"Интерферент: {interf}")
         ax.legend(fontsize=8)
-    fig.suptitle(f"Дозовый отклик на интерференты (пайплайн {pipe_label(pipe)})")
+    fig.suptitle(f"Дозовый отклик на интерференты (пайплайн {pipe_label(pipe)}, "
+                 f"валидация без подозрительных образцов)")
     path = FIGURES / "ntnu_interferents.png"
     fig.tight_layout()
     fig.savefig(path, dpi=120)
@@ -155,23 +179,35 @@ def main() -> None:
     t0 = _step("Загрузка данных (windows='work')")
     cal = load("calibration", windows="work")
     val = load("validation", windows="work")
+    val_clean = load("validation", windows="work", drop_suspect=True)
     print(cal.summary())
     print(val.summary())
+    print(val_clean.summary())
     _done(t0)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
         t0 = _step("Внешняя валидация (обучение на калибровке, тест на валидации)")
-        ext, ext_pred = external_validation(cal, val, pipes, seed=a.seed)
+        ext_parts, ext_pred_parts = [], []
+        for val_set, cur_val in (("all", val), ("clean", val_clean)):
+            ext, ext_pred = external_validation(cal, cur_val, pipes, seed=a.seed)
+            ext_parts.append(_first_col(ext, "val_set", val_set))
+            ext_pred_parts.append(_first_col(ext_pred, "val_set", val_set))
+        ext = pd.concat(ext_parts, ignore_index=True)
+        ext_pred = pd.concat(ext_pred_parts, ignore_index=True)
         ext.to_csv(f"{out}_external.csv", index=False)
         ext_pred.to_csv(f"{out}_external_pred.csv", index=False)
         print(_table(ext))
         _done(t0)
 
         t0 = _step("Исключение интерферента (lactate, ethanol)")
-        interf = pd.concat([interferent_exclusion(cal, val, name, pipes, seed=a.seed)
-                            for name in ("lactate", "ethanol")], ignore_index=True)
+        interf_parts = []
+        for val_set, cur_val in (("all", val), ("clean", val_clean)):
+            for name in ("lactate", "ethanol"):
+                part = interferent_exclusion(cal, cur_val, name, pipes, seed=a.seed)
+                interf_parts.append(_first_col(part, "val_set", val_set))
+        interf = pd.concat(interf_parts, ignore_index=True)
         interf.to_csv(f"{out}_interferents.csv", index=False)
         print(_table(interf))
         _done(t0)
@@ -183,14 +219,18 @@ def main() -> None:
         _done(t0)
 
         t0 = _step(f"Кривая обучения (sizes={sizes}, seeds={seeds})")
-        lc = learning_curve(cal, val, pipes, sizes=sizes, seeds=seeds)
+        lc_parts = []
+        for val_set, cur_val in (("all", val), ("clean", val_clean)):
+            part = learning_curve(cal, cur_val, pipes, sizes=sizes, seeds=seeds)
+            lc_parts.append(_first_col(part, "val_set", val_set))
+        lc = pd.concat(lc_parts, ignore_index=True)
         lc.to_csv(f"{out}_learning.csv", index=False)
         print(_table(lc))
         _done(t0)
 
     t0 = _step("Графики")
     print(plot_learning_curve(lc, pipes))
-    print(plot_interferents(cal, val, ["lactate", "ethanol"], pipes[0], a.seed))
+    print(plot_interferents(cal, val, val_clean, ["lactate", "ethanol"], pipes[0], a.seed))
     print(plot_lodo(lodo, pipes))
     _done(t0)
 
