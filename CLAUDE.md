@@ -15,21 +15,23 @@
 4. Всегда сравнивать с бейзлайном **PLS**. Если нелинейная модель выигрывает — показать, что это не артефакт сплита (разные seed, разные фолды, разброс по фолдам).
 5. Единицы концентрации и диапазон — записывать в отчёт явно. Не смешивать г/мл, г/л, мг/дл. Если в источнике противоречия — сообщить.
 6. Не придумывать параметры эксперимента (прибор, диапазон, температура, число образцов). Если из файлов/статьи не следует — писать «не указано».
-7. Результаты воспроизводимы: фиксированные seed, `requirements.txt`, один скрипт запуска.
+7. Результаты воспроизводимы: фиксированные seed, `pyproject.toml` + `uv.lock` (окружение только через uv, не pip), один скрипт запуска.
 8. Для быстрых итераций использовать `--quick`/подмножество моделей; полный прогон — отдельно.
 
 ## Структура
 - `src/spectra/` — пакет: `data.py` (контейнер), `preprocess.py` (SNV, MSC, SG), `models.py` (PLS/ridge/SVR/GPR/GBM), `evaluate.py` (вложенная CV + тест экстраполяции), `metrics.py`, `dashboard.py`, `synthetic.py` (отладка), `loaders/` (по файлу на датасет).
 - `scripts/run_synthetic_demo.py` — проверка пайплайна на синтетике; `scripts/run_experiment.py --loader <name> --out reports/<name>` — реальный прогон.
 - `data/raw/` — скачанные данные (не коммитить), `data/README.md` — откуда и как скачано.
-- `reports/` — результаты, HTML-дашборды. `tests/` — pytest (`python -m pytest -q`).
+- `reports/` — результаты, HTML-дашборды. `tests/` — pytest (`uv run pytest -q`).
+- `.claude/skills/` — командные скиллы (копия из agent-dev-plugins: develop-python, manage-git-workflow, develop-ml-systems, configure-python-quality).
+- `.tasks/` — файлы задач для делегирования реализации локальной модели (opencode).
 
 ## Что делать в первую очередь (по порядку)
-1. Создать venv, `pip install -r requirements.txt`, `pytest -q`, `python scripts/run_synthetic_demo.py --quick` (убедиться, что всё работает).
+1. `uv sync`, `uv run pytest -q`, `uv run python scripts/run_synthetic_demo.py --quick` (убедиться, что всё работает).
 2. Скачать датасет **NTNU «Aqueous glucose measured by NIR spectroscopy»** (CC0, DataverseNO, DOI 10.18710/NSHFAK; статья Fuglerud et al., J. Biophotonics, DOI 10.1002/jbio.202000450) в `data/raw/ntnu/`. Прочитать описание и статью. Записать в `docs/DATASETS.md`: прибор, диапазон длин волн, длину кюветы, температуру, концентрации глюкозы и мешающих веществ (лактат, этанол, кофеин, парацетамол), число образцов и повторов, структуру файлов.
 3. Нарисовать спектры (по цвету концентрации), проверить выбросы, дрейф, повторы. Сохранить картинки в `reports/figures/`.
 4. Написать `src/spectra/loaders/ntnu.py` (по `_template.py`) -> `SpectraDataset`. Явно определить `groups`.
-5. Запустить `python scripts/run_experiment.py --loader ntnu --out reports/ntnu`. Посмотреть дашборд.
+5. Запустить `uv run python scripts/run_experiment.py --loader ntnu --out reports/ntnu`. Посмотреть дашборд.
 6. Специальные проверки для NTNU: (а) обучение без мешающего вещества и тест с ним (как в статье), (б) обучение на одной группе/дне, тест на другой, (в) кривая «качество vs число обучающих образцов».
 7. Повторить для второго датасета (Mendeley Raman глюкозы, DOI 10.17632/yk75sxk6p5.1), если он подходит; добавить загрузчик.
 8. Написать `reports/SUMMARY.md` (1–2 страницы): что сделали, таблица результатов, какой пайплайн рекомендуем для нашего стенда и почему, ограничения.

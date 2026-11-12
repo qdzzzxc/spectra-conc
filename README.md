@@ -4,10 +4,9 @@
 
 ## Быстрый старт
 ```bash
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python -m pytest -q
-python scripts/run_synthetic_demo.py --quick           # ~2 мин, откройте reports/synthetic_dashboard.html
+uv sync
+uv run pytest -q
+uv run python scripts/run_synthetic_demo.py --quick    # ~3 мин, откройте reports/synthetic_dashboard.html
 ```
 
 ## Запуск Claude Code
@@ -17,6 +16,6 @@ python scripts/run_synthetic_demo.py --quick           # ~2 мин, открой
 ## Реальный датасет
 1. Скачать данные в `data/raw/<name>/`.
 2. Написать `src/spectra/loaders/<name>.py` с функцией `load()` (шаблон `_template.py`).
-3. `python scripts/run_experiment.py --loader <name> --out reports/<name>`.
+3. `uv run python scripts/run_experiment.py --loader <name> --out reports/<name>`.
 
 Заметка: дашборд подгружает Plotly с CDN (нужен интернет при открытии).
