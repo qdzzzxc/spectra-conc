@@ -11,16 +11,23 @@
 | Учебник по методам: физика, предобработка, модели, честная оценка | [`docs/METHODS.md`](docs/METHODS.md) |
 | Датасеты: как собраны, что в файлах, что подозрительно | [`docs/DATASETS.md`](docs/DATASETS.md) |
 | Домен в одном экране | [`docs/DOMAIN.md`](docs/DOMAIN.md) |
-| План работ | [`docs/PLAN.md`](docs/PLAN.md) |
+| План работ и что дальше | [`docs/PLAN.md`](docs/PLAN.md), [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | Правила проекта (для людей и для Claude Code) | [`CLAUDE.md`](CLAUDE.md) |
 
 ## Установка и проверка
 Нужен [uv](https://docs.astral.sh/uv/). Окружение фиксируется `pyproject.toml` + `uv.lock`.
 ```bash
 uv sync
-uv run pytest -q                                          # 30 тестов, ~15 с
+uv run pytest -q                                          # 41 тест, ~25 с
 uv run python scripts/run_synthetic_demo.py --quick       # пайплайн на синтетике, ~3 мин
 ```
+
+## Нейросети и TabPFN (необязательно)
+Основное окружение лёгкое (numpy, scikit-learn). Модели `cnn` (1D-CNN на torch) и `tabpfn` требуют отдельной группы зависимостей, torch ставится CPU-версией (~200 МБ):
+```bash
+uv sync --group nn          # без флага uv sync уберёт torch обратно
+```
+Для `tabpfn` нужны ещё веса (~880 МБ, лицензия **только для исследований**, коммерческое использование запрещено); команда скачивания — в [`docs/ROADMAP.md`](docs/ROADMAP.md). Тяжёлые прогоны запускать через `nice -n 19` и в фоне: на 2 ядрах они забирают всю машину (подробнее в ROADMAP).
 
 ## Данные
 Сырые файлы в git не хранятся. Команды скачивания и контрольные суммы — [`data/README.md`](data/README.md). Для NTNU:
