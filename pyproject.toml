@@ -14,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest"]
+nn = ["torch", "tabpfn"]
 
 [build-system]
 requires = ["hatchling"]
@@ -24,3 +25,12 @@ packages = ["src/spectra"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# Нейросети (CPU): uv sync --group nn; запуск: uv run --group nn ...
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
