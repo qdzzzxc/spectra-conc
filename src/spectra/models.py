@@ -49,6 +49,10 @@ def build(model: str, prep: str, n_features: int, n_train: int):
     elif model == "gbm":
         pipe = Pipeline([pre, ("m", HistGradientBoostingRegressor(random_state=0))])
         grid = {"m__max_depth": [3, None], "m__learning_rate": [0.05, 0.1], "m__max_iter": [200, 400]}
+    elif model == "cnn":
+        from .nn import CNN1DRegressor  # torch импортируется только при выборе cnn
+        pipe = Pipeline([pre, ("m", CNN1DRegressor())])
+        grid = {"m__augment": [False, True]}
     else:
         raise KeyError(model)
     return pipe, grid
