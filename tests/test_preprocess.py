@@ -4,7 +4,9 @@ import numpy as np
 import pytest
 from sklearn.pipeline import Pipeline
 from spectra.synthetic import make_synthetic
-from spectra.preprocess import get_preprocessor, SavGol, SNV
+from spectra.preprocess import get_preprocessor, SavGol, SNV, OSC
+from spectra.evaluate import nested_group_cv
+from spectra.metrics import regression_metrics
 
 
 def test_sg_window_from_name():
@@ -38,3 +40,35 @@ def test_bad_names():
     for bad in ("foo", "snv+bar"):
         with pytest.raises(KeyError):
             get_preprocessor(bad)
+
+
+def test_osc_components():
+    ds = make_synthetic(n_solutions=20, seed=4)
+    o = OSC(2).fit(ds.X, ds.y)
+    assert o.components_.shape == (2, ds.X.shape[1])
+    assert np.allclose(o.components_ @ o.components_.T, np.eye(2))
+
+
+def test_osc_removes_directions():
+    ds = make_synthetic(n_solutions=20, seed=4)
+    o = OSC(2).fit(ds.X, ds.y)
+    Xt = o.transform(ds.X)
+    assert np.allclose((Xt - o.mean_) @ o.components_.T, 0, atol=1e-8)
+
+
+def test_osc_needs_y():
+    ds = make_synthetic(n_solutions=20, seed=4)
+    with pytest.raises(ValueError):
+        OSC(1).fit(ds.X)
+    with pytest.raises(ValueError):
+        get_preprocessor("osc0")
+
+
+def test_osc_in_pipeline():
+    ds = make_synthetic(n_solutions=20, seed=4)
+    pipe = get_preprocessor("snv+osc2")
+    assert isinstance(pipe, Pipeline) and len(pipe.steps) == 2
+    second = pipe.steps[1][1]
+    assert isinstance(second, OSC) and second.n_components == 2
+    oof, _ = nested_group_cv(ds, "pls", "snv+osc2", outer_splits=4)
+    assert regression_metrics(ds.y, oof)["r2"] > 0.9

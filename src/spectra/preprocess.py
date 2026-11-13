@@ -10,6 +10,9 @@ from sklearn.pipeline import make_pipeline, FunctionTransformer
 # sg<deriv>[w<window>]: окно в точках; без w — 11 (как раньше)
 _SG_RE = re.compile(r"^sg([12])(?:w(\d+))?$")
 
+# osc<k>: OSC с k удаляемыми направлениями
+_OSC_RE = re.compile(r"^osc(\d+)$")
+
 
 class SNV(BaseEstimator, TransformerMixin):
     """Standard Normal Variate: вычесть среднее и поделить на std каждого спектра."""
@@ -33,6 +36,35 @@ class MSC(BaseEstimator, TransformerMixin):
             b, a = np.polyfit(self.ref_, row, 1)
             out[i] = (row - a) / (b if abs(b) > 1e-12 else 1.0)
         return out
+
+
+class OSC(BaseEstimator, TransformerMixin):
+    """Упрощённый OSC/EPO: убрать k главных направлений вариации X, ортогональной y (по train).
+    Остаток R = Xc − yc·wᵀ, где w = Xcᵀyc / (ycᵀyc); направления — первые k правых сингулярных векторов R."""
+
+    def __init__(self, n_components=1):
+        self.n_components = n_components
+
+    def fit(self, X, y=None):
+        if y is None:
+            raise ValueError("OSC требует y в fit")
+        X = np.asarray(X, float)
+        y = np.asarray(y, float).ravel()
+        self.mean_ = X.mean(0)
+        Xc = X - self.mean_
+        yc = y - y.mean()
+        w = Xc.T @ yc / (yc @ yc + 1e-12)
+        R = Xc - np.outer(yc, w)
+        _, _, Vt = np.linalg.svd(R, full_matrices=False)
+        k = min(self.n_components, Vt.shape[0])
+        self.components_ = Vt[:k]
+        self.n_features_in_ = X.shape[1]
+        return self
+
+    def transform(self, X):
+        X = np.asarray(X, float)
+        Xc = X - self.mean_
+        return X - (Xc @ self.components_.T) @ self.components_
 
 
 class SavGol(BaseEstimator, TransformerMixin):
@@ -73,7 +105,7 @@ def _parse_sg(token: str) -> SavGol | None:
 
 def get_preprocessor(name: str):
     """Предобработка по имени: токены raw/snv/msc/sg1/sg2, окно SG — суффикс wN (sg1w31),
-    цепочка через "+" (snv+sg1w31)."""
+    osc<k> — OSC с k направлениями (snv+osc2), цепочка через "+" (snv+sg1w31)."""
     steps = []
     for token in name.split("+"):
         if token == "raw":
@@ -82,6 +114,11 @@ def get_preprocessor(name: str):
             step = SNV()
         elif token == "msc":
             step = MSC()
+        elif (m := _OSC_RE.match(token)):
+            k = int(m.group(1))
+            if k < 1:
+                raise ValueError(f"Число компонент OSC должно быть >= 1: {token}")
+            step = OSC(k)
         else:
             step = _parse_sg(token)
             if step is None:
