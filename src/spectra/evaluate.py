@@ -23,7 +23,7 @@ def _fit_with_inner_cv(pipe, grid, X, y, groups, inner_splits=4, seed=0):
         return clone(pipe).fit(X, y)
     n_groups = len(np.unique(groups))
     cv = GroupKFold(n_splits=max(2, min(inner_splits, n_groups)), shuffle=True, random_state=seed)
-    gs = GridSearchCV(pipe, grid, cv=cv, scoring="neg_root_mean_squared_error", n_jobs=-1, refit=True)
+    gs = GridSearchCV(pipe, grid, cv=cv, scoring="neg_root_mean_squared_error", n_jobs=1, refit=True)
     gs.fit(X, y, groups=groups)
     return gs.best_estimator_
 

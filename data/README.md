@@ -30,3 +30,17 @@ sha256sum *
 | `Tenlabels_labels.csv` | 89f2184c-7f9e-40e1-910c-6f47c81db5e8 | 390 | `5aba09ea4f1e220b992bca442cc86e7798b2a946f559e1effae13d3f5724a697` |
 
 Описание содержимого — `docs/DATASETS.md`.
+
+## cambridge — Chip-scale sensor for spectroscopic metrology
+
+- [DOI 10.17863/CAM.110905](https://doi.org/10.17863/CAM.110905), CC BY 4.0.
+- Скачано 2026-11-23. Оригинальный Excel сохранён как `raw/cambridge/glucose.xlsx`.
+- SHA-256 `8493a9028634eec731f4f41eb1580b2b58d9cce4274bcc13ea8b0587e1db1638`.
+
+## lancaster — водные растворы глюкозы и интралипид
+
+- [DOI 10.17635/lancaster/researchdata/666](https://doi.org/10.17635/lancaster/researchdata/666), CC BY.
+- Скачано вручную 2026-11-23. Оригинал сохранён как `raw/lancaster/Intralipid_and_aq_glucose_comparison.opju`.
+- SHA-256 `2e6027f985c6fecf6f8e539dff5cd55d875a40ee8f2ffdf746706940cd592430`.
+- `opj2dat` из liborigin 3.0.0 не извлёк таблицы. Для доступа к ним можно открыть проект в [Origin Viewer](https://www.originlab.com/viewer/) и скопировать листы или сохранить проект в формате OPJ.
+- Экспорт из Windows сохранён в `raw/lancaster/origin_export/`. Манифест содержит 49 листов. Размеры CSV и таблиц метаданных сверены с манифестом. SHA-256 архива экспорта `1dc729e078427c8a70cb612d236b1e02910219e90debf0e16c900e249446d930`.

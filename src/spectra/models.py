@@ -1,5 +1,8 @@
 """Фабрика моделей: (pipeline, сетка гиперпараметров для GridSearchCV)."""
 from __future__ import annotations
+
+import os
+
 import numpy as np
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.ensemble import HistGradientBoostingRegressor
@@ -55,7 +58,8 @@ def build(model: str, prep: str, n_features: int, n_train: int):
         grid = {"m__augment": [False, True]}
     elif model == "tabpfn":
         from tabpfn import TabPFNRegressor  # тяжёлый импорт только при выборе tabpfn; веса — ~/.cache/tabpfn
-        pipe = Pipeline([pre, ("pca", PCA()), ("m", TabPFNRegressor(device="cpu", random_state=0))])
+        device = os.environ.get("SPECTRA_TABPFN_DEVICE", "cpu")
+        pipe = Pipeline([pre, ("pca", PCA(random_state=0)), ("m", TabPFNRegressor(device=device, random_state=0))])
         grid = {"pca__n_components": [c for c in (10, 30) if c < n_train // 2] or [min(10, n_train - 1)]}
     else:
         raise KeyError(model)
