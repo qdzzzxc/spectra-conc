@@ -6,7 +6,7 @@ A(wl) = l * (c * eps_analyte(wl) + sum_k c_k * eps_k(wl)) + baseline + расс�
 from __future__ import annotations
 import numpy as np
 import pandas as pd
-from .data import SpectraDataset
+from spectra.data import SpectraDataset
 
 
 def _gauss(wl, mu, sig): return np.exp(-0.5 * ((wl - mu) / sig) ** 2)

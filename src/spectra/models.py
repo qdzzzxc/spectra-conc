@@ -14,7 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 from sklearn.decomposition import PCA
 
-from .preprocess import get_preprocessor
+from spectra.preprocess import get_preprocessor
 
 
 class PLS1D(PLSRegression):
@@ -53,7 +53,7 @@ def build(model: str, prep: str, n_features: int, n_train: int):
         pipe = Pipeline([pre, ("m", HistGradientBoostingRegressor(random_state=0))])
         grid = {"m__max_depth": [3, None], "m__learning_rate": [0.05, 0.1], "m__max_iter": [200, 400]}
     elif model == "cnn":
-        from .nn import CNN1DRegressor  # torch импортируется только при выборе cnn
+        from spectra.nn import CNN1DRegressor  # torch импортируется только при выборе cnn
         pipe = Pipeline([pre, ("m", CNN1DRegressor())])
         grid = {"m__augment": [False, True]}
     elif model == "tabpfn":

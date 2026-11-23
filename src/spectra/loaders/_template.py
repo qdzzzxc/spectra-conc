@@ -6,7 +6,7 @@
   - какие мета-поля нужны для проверок (партия, день, температура, концентрации мешающих веществ).
 """
 from pathlib import Path
-from ..data import SpectraDataset, load_wide_csv
+from spectra.data import SpectraDataset, load_wide_csv
 
 RAW = Path(__file__).resolve().parents[3] / "data" / "raw"
 

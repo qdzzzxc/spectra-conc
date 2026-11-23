@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import linregress
 
-from .data import SpectraDataset
-from .evaluate import _fit_with_inner_cv
-from .metrics import regression_metrics
-from .models import build
+from spectra.data import SpectraDataset
+from spectra.evaluate import _fit_with_inner_cv
+from spectra.metrics import regression_metrics
+from spectra.models import build
 
 Pipe = tuple[str, str]
 

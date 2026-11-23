@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..data import SpectraDataset
+from spectra.data import SpectraDataset
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[3] / "data/raw/lancaster/origin_export"
 SHEETS = {

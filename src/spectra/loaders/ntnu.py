@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..data import SpectraDataset
+from spectra.data import SpectraDataset
 
 RAW = Path(__file__).resolve().parents[3] / "data" / "raw" / "ntnu"
 FILES = {"calibration": "CalibrationData.txt", "validation": "ValidationData.txt"}

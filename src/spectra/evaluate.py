@@ -6,9 +6,9 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.model_selection import GroupKFold, GridSearchCV
 
-from .data import SpectraDataset
-from .metrics import regression_metrics
-from .models import build
+from spectra.data import SpectraDataset
+from spectra.metrics import regression_metrics
+from spectra.models import build
 
 
 def group_folds(groups: np.ndarray, n_splits: int, seed: int) -> list[tuple[np.ndarray, np.ndarray]]:
