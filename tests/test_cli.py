@@ -1,4 +1,5 @@
 """Тесты CLI scripts/run_experiment.py."""
+
 import pathlib
 import subprocess
 import sys

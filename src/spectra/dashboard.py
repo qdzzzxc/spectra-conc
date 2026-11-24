@@ -1,14 +1,16 @@
 """Генерация автономного HTML-дашборда (Plotly с CDN, данные встроены в страницу)."""
-from __future__ import annotations
+
 import json
+
 import numpy as np
 import pandas as pd
 
 PLOTLY = "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"
 
 
-
-def build_dashboard(results: pd.DataFrame, oof: pd.DataFrame, ds, out_path: str, title="Концентрация по спектрам"):
+def build_dashboard(
+    results: pd.DataFrame, oof: pd.DataFrame, ds, out_path: str, title="Концентрация по спектрам"
+):
     res = results[results["split"].isin(["group_cv", "extrapolation"])].copy()
     cv = res[res.split == "group_cv"].sort_values("rmse").reset_index(drop=True)
     ex = res[res.split == "extrapolation"]
@@ -19,9 +21,16 @@ def build_dashboard(results: pd.DataFrame, oof: pd.DataFrame, ds, out_path: str,
         "ex": ex.replace({np.nan: None}).to_dict("records"),
         "wl": [float(x) for x in ds.wl],
         "mean_spec": [float(x) for x in ds.X.mean(0)],
-        "spectra": [[float(v) for v in ds.X[i]] for i in np.linspace(0, len(ds) - 1, min(len(ds), 30)).astype(int)],
-        "spectra_y": [float(ds.y[i]) for i in np.linspace(0, len(ds) - 1, min(len(ds), 30)).astype(int)],
-        "oof": oof[["model", "prep", "y_true", "y_pred"]].round(5).to_dict("records") if len(oof) else [],
+        "spectra": [
+            [float(v) for v in ds.X[i]]
+            for i in np.linspace(0, len(ds) - 1, min(len(ds), 30)).astype(int)
+        ],
+        "spectra_y": [
+            float(ds.y[i]) for i in np.linspace(0, len(ds) - 1, min(len(ds), 30)).astype(int)
+        ],
+        "oof": oof[["model", "prep", "y_true", "y_pred"]].round(5).to_dict("records")
+        if len(oof)
+        else [],
     }
     html = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title><script src="{PLOTLY}"></script>

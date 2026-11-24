@@ -1,11 +1,12 @@
 """Предобработка спектров как sklearn-трансформеры (работают построчно, без утечки между train/test,
 кроме MSC, у которого эталон = средний спектр обучающей выборки)."""
-from __future__ import annotations
+
 import re
+
 import numpy as np
 from scipy.signal import savgol_filter
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import make_pipeline, FunctionTransformer
+from sklearn.pipeline import FunctionTransformer, make_pipeline
 
 # sg<deriv>[w<window>]: окно в точках; без w — 11 (как раньше)
 _SG_RE = re.compile(r"^sg([12])(?:w(\d+))?$")
@@ -16,9 +17,11 @@ _OSC_RE = re.compile(r"^osc(\d+)$")
 
 class SNV(BaseEstimator, TransformerMixin):
     """Standard Normal Variate: вычесть среднее и поделить на std каждого спектра."""
+
     def fit(self, X, y=None):
         self.n_features_in_ = np.asarray(X).shape[1]
         return self
+
     def transform(self, X):
         X = np.asarray(X, float)
         return (X - X.mean(1, keepdims=True)) / (X.std(1, keepdims=True) + 1e-12)
@@ -26,9 +29,11 @@ class SNV(BaseEstimator, TransformerMixin):
 
 class MSC(BaseEstimator, TransformerMixin):
     """Multiplicative Scatter Correction относительно среднего спектра train."""
+
     def fit(self, X, y=None):
         self.ref_ = np.asarray(X, float).mean(0)
         return self
+
     def transform(self, X):
         X = np.asarray(X, float)
         out = np.empty_like(X)
@@ -73,9 +78,11 @@ class SavGol(BaseEstimator, TransformerMixin):
 
     def __init__(self, window=11, poly=2, deriv=0):
         self.window, self.poly, self.deriv = window, poly, deriv
+
     def fit(self, X, y=None):
         self.n_features_in_ = np.asarray(X).shape[1]
         return self
+
     def transform(self, X):
         return savgol_filter(np.asarray(X, float), self.window, self.poly, deriv=self.deriv, axis=1)
 
@@ -114,7 +121,7 @@ def get_preprocessor(name: str):
             step = SNV()
         elif token == "msc":
             step = MSC()
-        elif (m := _OSC_RE.match(token)):
+        elif m := _OSC_RE.match(token):
             k = int(m.group(1))
             if k < 1:
                 raise ValueError(f"Число компонент OSC должно быть >= 1: {token}")

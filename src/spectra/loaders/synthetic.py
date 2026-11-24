@@ -1,4 +1,5 @@
 """Загрузчик синтетики для проверки CLI без реальных данных."""
+
 from spectra.data import SpectraDataset
 from spectra.synthetic import make_synthetic
 

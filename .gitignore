@@ -7,3 +7,6 @@ __pycache__/
 reports/*.csv
 reports/*.html
 reports/*.log
+/reports/*.docx
+/reports/*.pdf
+/reports/.~lock.*#

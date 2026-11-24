@@ -7,8 +7,9 @@
     groups (n_samples,)             id физического образца/раствора (повторы одного раствора -> одна группа)
     meta   DataFrame                прочее: партия, день, температура, концентрации мешающих веществ...
 """
-from __future__ import annotations
+
 from dataclasses import dataclass, field
+
 import numpy as np
 import pandas as pd
 
@@ -31,8 +32,10 @@ class SpectraDataset:
         return len(self.y)
 
     def summary(self) -> str:
-        return (f"{self.name}: n={len(self)}, p={self.X.shape[1]}, groups={len(np.unique(self.groups))}, "
-                f"wl=[{self.wl.min():.1f},{self.wl.max():.1f}], y=[{self.y.min():.3g},{self.y.max():.3g}]")
+        return (
+            f"{self.name}: n={len(self)}, p={self.X.shape[1]}, groups={len(np.unique(self.groups))}, "
+            f"wl=[{self.wl.min():.1f},{self.wl.max():.1f}], y=[{self.y.min():.3g},{self.y.max():.3g}]"
+        )
 
 
 def load_wide_csv(path, y_col, group_col=None, meta_cols=(), name=None, sep=",") -> SpectraDataset:
@@ -45,7 +48,8 @@ def load_wide_csv(path, y_col, group_col=None, meta_cols=(), name=None, sep=",")
     wl_cols, wl = [], []
     for c in df.columns:
         try:
-            wl.append(float(c)); wl_cols.append(c)
+            wl.append(float(c))
+            wl_cols.append(c)
         except (TypeError, ValueError):
             pass
     X = df[wl_cols].to_numpy(float)

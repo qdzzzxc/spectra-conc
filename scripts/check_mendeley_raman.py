@@ -6,7 +6,6 @@
 Запуск: uv run python scripts/check_mendeley_raman.py
 Результат: таблица в stdout + reports/figures/mendeley_raman_means.png.
 """
-from __future__ import annotations
 
 import pathlib
 import re
@@ -43,14 +42,18 @@ def snv(X: np.ndarray) -> np.ndarray:
 
 def logo_rmse(X: np.ndarray, y: np.ndarray, g: np.ndarray, n_comp: int) -> tuple[float, float]:
     """RMSE и корреляция PLS при исключении уровня концентрации целиком."""
-    p = cross_val_predict(PLSRegression(n_comp, scale=False), X, y, groups=g, cv=LeaveOneGroupOut()).ravel()
+    p = cross_val_predict(
+        PLSRegression(n_comp, scale=False), X, y, groups=g, cv=LeaveOneGroupOut()
+    ).ravel()
     return float(np.sqrt(np.mean((p - y) ** 2))), float(np.corrcoef(p, y)[0, 1])
 
 
 def check_set(name: str, seed: int = 0) -> pd.DataFrame:
     """Таблица RMSE для raw/SNV × число компонент + бейзлайн с перемешанными по уровням метками."""
     X, y, g, raw_labels = read_set(name)
-    print(f"{name}: {X.shape[0]} спектров × {X.shape[1]} каналов, уровни: {sorted(set(raw_labels), key=raw_labels.index)}")
+    print(
+        f"{name}: {X.shape[0]} спектров × {X.shape[1]} каналов, уровни: {sorted(set(raw_labels), key=raw_labels.index)}"
+    )
     rng = np.random.default_rng(seed)
     levels = np.unique(g)
     perm = dict(zip(levels, rng.permutation([y[g == k][0] for k in levels])))
@@ -60,8 +63,17 @@ def check_set(name: str, seed: int = 0) -> pd.DataFrame:
         for nc in N_COMPONENTS:
             rmse, r = logo_rmse(Z, y, g, nc)
             rmse_perm, _ = logo_rmse(Z, y_perm, g, nc)
-            rows.append({"set": name, "prep": prep, "n_comp": nc, "rmse": rmse, "r": r,
-                         "rmse_permuted": rmse_perm, "std_y": float(y.std())})
+            rows.append(
+                {
+                    "set": name,
+                    "prep": prep,
+                    "n_comp": nc,
+                    "rmse": rmse,
+                    "r": r,
+                    "rmse_permuted": rmse_perm,
+                    "std_y": float(y.std()),
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -74,10 +86,14 @@ def plot_means() -> None:
         cmap = plt.get_cmap("viridis")
         for k in np.unique(g):
             v = y[g == k][0]
-            ax.plot(Z[g == k].mean(0), color=cmap((v - y.min()) / np.ptp(y)), lw=0.8, label=f"{v:g}")
+            ax.plot(
+                Z[g == k].mean(0), color=cmap((v - y.min()) / np.ptp(y)), lw=0.8, label=f"{v:g}"
+            )
         ax.set(title=name, xlabel="номер канала", ylabel="SNV")
         ax.legend(fontsize=6, ncol=2)
-    fig.suptitle("Mendeley Raman: средний спектр уровня; цвет — число из подписи (единицы в источнике не определены)")
+    fig.suptitle(
+        "Mendeley Raman: средний спектр уровня; цвет — число из подписи (единицы в источнике не определены)"
+    )
     fig.tight_layout()
     out = ROOT / "reports" / "figures" / "mendeley_raman_means.png"
     fig.savefig(out, dpi=120)

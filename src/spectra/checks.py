@@ -1,5 +1,4 @@
 """Специальные проверки устойчивости: исключение интерферента, перенос на другой день, внешняя валидация, кривая обучения."""
-from __future__ import annotations
 
 import numpy as np
 import pandas as pd
@@ -39,7 +38,9 @@ def _metrics_row(y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
     return {k: m[k] for k in ("rmse", "mae", "bias", "r2", "n")}
 
 
-def external_validation(cal: SpectraDataset, val: SpectraDataset, pipes: list[Pipe], seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
+def external_validation(
+    cal: SpectraDataset, val: SpectraDataset, pipes: list[Pipe], seed: int = 0
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Внешняя валидация: обучение на всей калибровке, тест на всей валидации (другой день, другие составы).
 
     Возвращает (таблицу метрик по пайплайнам, предсказания по каждому спектру валидации).
@@ -47,13 +48,25 @@ def external_validation(cal: SpectraDataset, val: SpectraDataset, pipes: list[Pi
     rows, pred_rows = [], []
     for model, prep in pipes:
         pred = fit_predict(cal, val.X, (model, prep), seed=seed)
-        rows.append({
-            "model": model, "prep": prep,
-            "n_train": len(cal), "n_train_groups": len(np.unique(cal.groups)),
-            **_metrics_row(val.y, pred),
-        })
+        rows.append(
+            {
+                "model": model,
+                "prep": prep,
+                "n_train": len(cal),
+                "n_train_groups": len(np.unique(cal.groups)),
+                **_metrics_row(val.y, pred),
+            }
+        )
         for idx in range(len(val)):
-            pred_rows.append({"model": model, "prep": prep, "idx": idx, "y_true": float(val.y[idx]), "y_pred": float(pred[idx])})
+            pred_rows.append(
+                {
+                    "model": model,
+                    "prep": prep,
+                    "idx": idx,
+                    "y_true": float(val.y[idx]),
+                    "y_pred": float(pred[idx]),
+                }
+            )
     return pd.DataFrame(rows), pd.DataFrame(pred_rows)
 
 
@@ -78,12 +91,20 @@ def interferent_exclusion(
             pred = fit_predict(train, val.X, (model, prep), seed=seed)
             res = pred - val.y
             lr = linregress(val.meta[interferent].to_numpy(dtype=float), res)
-            rows.append({
-                "interferent": interferent, "train_set": train_set, "model": model, "prep": prep,
-                "n_train": len(train), "n_train_groups": len(np.unique(train.groups)),
-                **_metrics_row(val.y, pred),
-                "slope": lr.slope, "slope_se": lr.stderr, "slope_p": lr.pvalue,
-            })
+            rows.append(
+                {
+                    "interferent": interferent,
+                    "train_set": train_set,
+                    "model": model,
+                    "prep": prep,
+                    "n_train": len(train),
+                    "n_train_groups": len(np.unique(train.groups)),
+                    **_metrics_row(val.y, pred),
+                    "slope": lr.slope,
+                    "slope_se": lr.stderr,
+                    "slope_p": lr.pvalue,
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -106,15 +127,23 @@ def leave_one_day_out(cal: SpectraDataset, pipes: list[Pipe], seed: int = 0) -> 
         train = subset(cal, tr)
         for model, prep in pipes:
             pred = fit_predict(train, cal.X[te], (model, prep), seed=seed)
-            rows.append({
-                "day": day, "model": model, "prep": prep,
-                "n_train": len(train), "n_train_groups": len(train_groups), "n_dropped_groups": n_dropped,
-                **_metrics_row(cal.y[te], pred),
-            })
+            rows.append(
+                {
+                    "day": day,
+                    "model": model,
+                    "prep": prep,
+                    "n_train": len(train),
+                    "n_train_groups": len(train_groups),
+                    "n_dropped_groups": n_dropped,
+                    **_metrics_row(cal.y[te], pred),
+                }
+            )
     return pd.DataFrame(rows)
 
 
-def learning_curve(cal: SpectraDataset, val: SpectraDataset, pipes: list[Pipe], sizes: list[int], seeds: list[int]) -> pd.DataFrame:
+def learning_curve(
+    cal: SpectraDataset, val: SpectraDataset, pipes: list[Pipe], sizes: list[int], seeds: list[int]
+) -> pd.DataFrame:
     """Кривая «качество vs число обучающих составов»: для каждого размера — случайные группы калибровки.
 
     Выбор групп зависит только от пары (size, seed) и одинаков для всех пайплайнов.
@@ -130,8 +159,14 @@ def learning_curve(cal: SpectraDataset, val: SpectraDataset, pipes: list[Pipe], 
             train = subset(cal, np.isin(cal.groups, chosen))
             for model, prep in pipes:
                 pred = fit_predict(train, val.X, (model, prep), seed=seed)
-                rows.append({
-                    "n_groups": eff_size, "seed": seed, "model": model, "prep": prep,
-                    "n_train": len(train), **_metrics_row(val.y, pred),
-                })
+                rows.append(
+                    {
+                        "n_groups": eff_size,
+                        "seed": seed,
+                        "model": model,
+                        "prep": prep,
+                        "n_train": len(train),
+                        **_metrics_row(val.y, pred),
+                    }
+                )
     return pd.DataFrame(rows)

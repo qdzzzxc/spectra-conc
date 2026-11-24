@@ -1,5 +1,4 @@
 """Сравнение отдельных интервалов NTNU с PLS на всём рабочем диапазоне."""
-from __future__ import annotations
 
 import argparse
 import logging
@@ -54,8 +53,12 @@ def fit_pls(
         for columns in bands.values()
     ]
     search = GridSearchCV(
-        pipeline, grid, cv=cv, scoring="neg_root_mean_squared_error",
-        n_jobs=1, error_score="raise",
+        pipeline,
+        grid,
+        cv=cv,
+        scoring="neg_root_mean_squared_error",
+        n_jobs=1,
+        error_score="raise",
     )
     search.fit(data.X[train], data.y[train])
     return search.best_estimator_
@@ -89,7 +92,9 @@ def main() -> None:
                 model = fit_pls(calibration, train, candidates, seed)
                 predictions[test] = model.predict(calibration.X[test])
                 if name == "Вложенный выбор":
-                    selections.append({"seed": seed, "fold": fold, "band": selected_band(model, bands)})
+                    selections.append(
+                        {"seed": seed, "fold": fold, "band": selected_band(model, bands)}
+                    )
             score = regression_metrics(calibration.y, predictions)["rmse"]
             rows.append({"band": name, "split": "group_cv", "seed": seed, "rmse": score})
         LOGGER.info("Групповая CV завершена для seed %d", seed)
@@ -99,10 +104,15 @@ def main() -> None:
         candidates = presets[name]
         model = fit_pls(calibration, train, candidates, seed=0)
         score = regression_metrics(validation.y, model.predict(validation.X))["rmse"]
-        rows.append({
-            "band": name, "split": "validation_clean", "seed": 0, "rmse": score,
-            "selected_band": selected_band(model, candidates),
-        })
+        rows.append(
+            {
+                "band": name,
+                "split": "validation_clean",
+                "seed": 0,
+                "rmse": score,
+                "selected_band": selected_band(model, candidates),
+            }
+        )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     results = pd.DataFrame(rows)
@@ -113,8 +123,12 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(11, 4.5))
     intervals = summary.loc[list(bands)]
     ax.bar(intervals.index, intervals["mean"], yerr=intervals["std"], capsize=3)
-    ax.axhline(summary.loc["Весь диапазон", "mean"], color="tab:orange", label="PLS на всём диапазоне")
-    ax.set(xlabel="Длина волны, нм", ylabel="RMSE, мМ", title="NTNU: PLS + SNV по спектральным полосам")
+    ax.axhline(
+        summary.loc["Весь диапазон", "mean"], color="tab:orange", label="PLS на всём диапазоне"
+    )
+    ax.set(
+        xlabel="Длина волны, нм", ylabel="RMSE, мМ", title="NTNU: PLS + SNV по спектральным полосам"
+    )
     ax.tick_params(axis="x", rotation=45)
     ax.legend()
     fig.tight_layout()

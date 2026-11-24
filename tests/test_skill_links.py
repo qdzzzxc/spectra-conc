@@ -9,7 +9,9 @@ CODEX_SKILLS = ROOT / ".agents" / "skills"
 
 def test_skill_folders_match() -> None:
     """Обнаруживает пропущенные, лишние и переименованные скиллы."""
-    claude_names = {entry.name for entry in CLAUDE_SKILLS.iterdir() if not entry.name.startswith(".")}
+    claude_names = {
+        entry.name for entry in CLAUDE_SKILLS.iterdir() if not entry.name.startswith(".")
+    }
     codex_names = {entry.name for entry in CODEX_SKILLS.iterdir() if not entry.name.startswith(".")}
 
     assert claude_names, "В .claude/skills нет проектных скиллов"

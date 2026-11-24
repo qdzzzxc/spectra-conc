@@ -3,7 +3,6 @@
 Запуск: uv run python scripts/run_ntnu_checks.py --quick --out reports/ntnu_checks
 Результат: CSV по префиксу --out + PNG в reports/figures/.
 """
-from __future__ import annotations
 
 import argparse
 import pathlib
@@ -22,7 +21,14 @@ import numpy as np
 import pandas as pd
 from scipy.stats import linregress
 
-from spectra.checks import external_validation, fit_predict, interferent_exclusion, leave_one_day_out, learning_curve, subset
+from spectra.checks import (
+    external_validation,
+    fit_predict,
+    interferent_exclusion,
+    learning_curve,
+    leave_one_day_out,
+    subset,
+)
 from spectra.loaders.ntnu import load
 
 FIGURES = pathlib.Path(__file__).resolve().parents[1] / "reports" / "figures"
@@ -56,7 +62,7 @@ def _done(t0: float) -> None:
 
 
 def _table(df: pd.DataFrame) -> str:
-    return df.round(3).to_string(index=False)
+    return str(df.round(3).to_string(index=False))
 
 
 def _first_col(df: pd.DataFrame, col: str, value: str) -> pd.DataFrame:
@@ -73,12 +79,16 @@ def plot_learning_curve(lc: pd.DataFrame, pipes: list[tuple[str, str]]) -> pathl
     styles = {"all": "--", "clean": "-"}
     for val_set in ("all", "clean"):
         for pipe in pipes:
-            sub = lc[(lc["val_set"] == val_set) & (lc["model"] == pipe[0]) & (lc["prep"] == pipe[1])]
+            sub = lc[
+                (lc["val_set"] == val_set) & (lc["model"] == pipe[0]) & (lc["prep"] == pipe[1])
+            ]
             agg = sub.groupby("n_groups")["rmse"].agg(["mean", "std"])
             x = agg.index.to_numpy(float)
             mean = agg["mean"].to_numpy()
             std = np.nan_to_num(agg["std"].to_numpy(), nan=0.0)
-            ax.plot(x, mean, marker="o", ls=styles[val_set], label=f"{pipe_label(pipe)} ({val_set})")
+            ax.plot(
+                x, mean, marker="o", ls=styles[val_set], label=f"{pipe_label(pipe)} ({val_set})"
+            )
             ax.fill_between(x, mean - std, mean + std, alpha=0.2)
     ax.set_xlabel("число составов в обучении, шт")
     ax.set_ylabel("RMSEP на валидации, мМ")
@@ -101,8 +111,10 @@ def plot_interferents(
     """
     FIGURES.mkdir(parents=True, exist_ok=True)
     colors = {"without": "tab:blue", "full": "tab:red"}
-    suspect_mask = (~val.meta["suspect"].to_numpy(dtype=bool))
-    fig, axes = plt.subplots(1, len(interferents), figsize=(5 * len(interferents), 4.5), squeeze=False)
+    suspect_mask = ~val.meta["suspect"].to_numpy(dtype=bool)
+    fig, axes = plt.subplots(
+        1, len(interferents), figsize=(5 * len(interferents), 4.5), squeeze=False
+    )
     for ax, interf in zip(axes[0], interferents):
         conc_val = val_clean.meta[interf].to_numpy(dtype=float)
         conc_cal = cal.meta[interf].to_numpy(dtype=float)
@@ -113,22 +125,35 @@ def plot_interferents(
             lr = linregress(conc_val, res)
             xs = np.array([conc_val.min(), conc_val.max()], dtype=float)
             ax.scatter(conc_val, res, s=12, color=colors[train_set], alpha=0.6)
-            ax.plot(xs, lr.intercept + lr.slope * xs, color=colors[train_set], lw=1.5,
-                    label=f"{train_set}: {lr.slope:.2f} мМ/мМ")
+            ax.plot(
+                xs,
+                lr.intercept + lr.slope * xs,
+                color=colors[train_set],
+                lw=1.5,
+                label=f"{train_set}: {lr.slope:.2f} мМ/мМ",
+            )
             if train_set == "full":
                 pred_s = fit_predict(train, val.X, pipe, seed=seed)
                 res_s = pred_s - val.y
                 conc_s = val.meta[interf].to_numpy(dtype=float)[~suspect_mask]
                 res_sus = res_s[~suspect_mask]
-                ax.scatter(conc_s, res_sus, marker="x", color="gray", s=25,
-                           label="подозрительные (исключены)")
+                ax.scatter(
+                    conc_s,
+                    res_sus,
+                    marker="x",
+                    color="gray",
+                    s=25,
+                    label="подозрительные (исключены)",
+                )
         ax.axhline(0.0, color="gray", lw=0.8, ls="--")
         ax.set_xlabel(f"{interf}, мМ")
         ax.set_ylabel("предсказание − глюкоза, мМ")
         ax.set_title(f"Интерферент: {interf}")
         ax.legend(fontsize=8)
-    fig.suptitle(f"Дозовый отклик на интерференты (пайплайн {pipe_label(pipe)}, "
-                 f"валидация без подозрительных образцов)")
+    fig.suptitle(
+        f"Дозовый отклик на интерференты (пайплайн {pipe_label(pipe)}, "
+        f"валидация без подозрительных образцов)"
+    )
     path = FIGURES / "ntnu_interferents.png"
     fig.tight_layout()
     fig.savefig(path, dpi=120)
@@ -164,8 +189,12 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Специальные проверки устойчивости (NTNU)")
     ap.add_argument("--out", default="reports/ntnu_checks", help="префикс выходных файлов")
     ap.add_argument("--pipes", nargs="*", default=None, help="пайплайны вида model:prep")
-    ap.add_argument("--quick", action="store_true", help="быстрый прогон: один пайплайн, мало размеров/seed")
-    ap.add_argument("--seed", type=int, default=0, help="seed для внешней валидации, интерферентов и LODO")
+    ap.add_argument(
+        "--quick", action="store_true", help="быстрый прогон: один пайплайн, мало размеров/seed"
+    )
+    ap.add_argument(
+        "--seed", type=int, default=0, help="seed для внешней валидации, интерферентов и LODO"
+    )
     a = ap.parse_args()
 
     pipes_explicit = a.pipes is not None

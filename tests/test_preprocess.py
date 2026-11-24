@@ -1,12 +1,15 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
 import pytest
 from sklearn.pipeline import Pipeline
-from spectra.synthetic import make_synthetic
-from spectra.preprocess import get_preprocessor, SavGol, SNV, OSC
+
 from spectra.evaluate import nested_group_cv
 from spectra.metrics import regression_metrics
+from spectra.preprocess import OSC, SNV, SavGol, get_preprocessor
+from spectra.synthetic import make_synthetic
 
 
 def test_sg_window_from_name():

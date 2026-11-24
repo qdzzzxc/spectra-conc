@@ -1,5 +1,4 @@
 """Спектры Lancaster из экспорта Origin с проверкой исходных подписей."""
-from __future__ import annotations
 
 import re
 from pathlib import Path
@@ -13,7 +12,8 @@ DEFAULT_ROOT = Path(__file__).resolve().parents[3] / "data/raw/lancaster/origin_
 SHEETS = {
     "aqueous_reflect": ("02_D/005_Raw - PLS", "03_C/001_water fixed 1"),
     "aqueous_transmit": (
-        "04_HL2000TRlight/002_RAW - PLS", "04_HL2000TRlight/001_HL2000 TR light only 1",
+        "04_HL2000TRlight/002_RAW - PLS",
+        "04_HL2000TRlight/001_HL2000 TR light only 1",
     ),
     "intralipid_reflect": ("05_F/002_Raw - PLS", "05_F/001_Reflect 20pc IL eq vol water 5"),
     "intralipid_transmit": ("10_E/002_Raw - PLS", "10_E/001_TR 20pc IL eq vol water 5"),
@@ -44,7 +44,9 @@ def load(
     y = concentration.to_numpy(dtype=float)
     if not np.array_equal(y, labels.dropna().to_numpy()[source_indices]):
         raise ValueError(f"Lancaster {series}: метки концентрации расходятся")
-    meta = pd.DataFrame({"source_comment": comments.loc[labels.dropna().index].to_numpy()[source_indices]})
+    meta = pd.DataFrame(
+        {"source_comment": comments.loc[labels.dropna().index].to_numpy()[source_indices]}
+    )
     if band is not None:
         keep = (wavelengths >= band[0]) & (wavelengths <= band[1])
         if not keep.any():

@@ -1,12 +1,12 @@
-"""Нейросетевые модели на torch (CPU) с интерфейсом sklearn.
+"""Нейросетевые модели на torch с интерфейсом sklearn.
 
 Требуют группу зависимостей nn: uv sync --group nn.
 """
-from __future__ import annotations
+
 import numpy as np
 import torch
-from torch import nn
 from sklearn.base import BaseEstimator, RegressorMixin
+from torch import nn
 
 
 def _make_net(n_filters: int, kernel_size: int, hidden: int, dropout: float) -> nn.Sequential:
@@ -17,9 +17,17 @@ def _make_net(n_filters: int, kernel_size: int, hidden: int, dropout: float) -> 
     pad = kernel_size // 2
     return nn.Sequential(
         nn.AvgPool1d(4),
-        nn.Conv1d(1, n_filters, kernel_size, padding=pad), nn.ReLU(), nn.AvgPool1d(4),
-        nn.Conv1d(n_filters, n_filters, kernel_size, padding=pad), nn.ReLU(), nn.AvgPool1d(4),
-        nn.Flatten(), nn.Dropout(dropout), nn.LazyLinear(hidden), nn.ReLU(), nn.Linear(hidden, 1),
+        nn.Conv1d(1, n_filters, kernel_size, padding=pad),
+        nn.ReLU(),
+        nn.AvgPool1d(4),
+        nn.Conv1d(n_filters, n_filters, kernel_size, padding=pad),
+        nn.ReLU(),
+        nn.AvgPool1d(4),
+        nn.Flatten(),
+        nn.Dropout(dropout),
+        nn.LazyLinear(hidden),
+        nn.ReLU(),
+        nn.Linear(hidden, 1),
     )
 
 
@@ -31,9 +39,24 @@ class CNN1DRegressor(BaseEstimator, RegressorMixin):
     ±shift_max каналов.
     """
 
-    def __init__(self, n_filters=8, kernel_size=9, hidden=32, dropout=0.1, lr=1e-3, weight_decay=1e-4,
-                 epochs=200, batch_size=64, augment=True, offset_std=0.1, slope_std=0.1, noise_std=0.02,
-                 shift_max=2, random_state=0):
+    def __init__(
+        self,
+        n_filters=8,
+        kernel_size=9,
+        hidden=32,
+        dropout=0.1,
+        lr=1e-3,
+        weight_decay=1e-4,
+        epochs=200,
+        batch_size=64,
+        augment=True,
+        offset_std=0.1,
+        slope_std=0.1,
+        noise_std=0.02,
+        shift_max=2,
+        random_state=0,
+        device="cpu",
+    ):
         self.n_filters = n_filters
         self.kernel_size = kernel_size
         self.hidden = hidden
@@ -48,6 +71,7 @@ class CNN1DRegressor(BaseEstimator, RegressorMixin):
         self.noise_std = noise_std
         self.shift_max = shift_max
         self.random_state = random_state
+        self.device = device
 
     def fit(self, X, y):
         """Обучить сеть на спектрах X (n, p) и концентрациях y."""
@@ -62,8 +86,10 @@ class CNN1DRegressor(BaseEstimator, RegressorMixin):
         self.y_mean_ = float(y.mean())
         self.y_scale_ = float(y.std()) or 1.0
         yn = (y - self.y_mean_) / self.y_scale_
-        self.net_ = _make_net(self.n_filters, self.kernel_size, self.hidden, self.dropout)
-        self.net_(torch.zeros(1, 1, X.shape[1]))
+        self.net_ = _make_net(self.n_filters, self.kernel_size, self.hidden, self.dropout).to(
+            self.device
+        )
+        self.net_(torch.zeros(1, 1, X.shape[1], device=self.device))
         opt = torch.optim.AdamW(self.net_.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         Xt = torch.from_numpy(Xn).unsqueeze(1)
         yt = torch.from_numpy(yn)
@@ -72,11 +98,13 @@ class CNN1DRegressor(BaseEstimator, RegressorMixin):
         for _ in range(self.epochs):
             perm = rng.permutation(n)
             for i in range(0, n, self.batch_size):
-                idx = perm[i:i + self.batch_size]
+                idx = perm[i : i + self.batch_size]
                 xb = Xt[idx]
                 if self.augment:
                     xb = self._augment(xb, rng)
-                loss = torch.mean((self.net_(xb).squeeze(1) - yt[idx]) ** 2)
+                loss = torch.mean(
+                    (self.net_(xb.to(self.device)).squeeze(1) - yt[idx].to(self.device)) ** 2
+                )
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
@@ -101,5 +129,6 @@ class CNN1DRegressor(BaseEstimator, RegressorMixin):
         Xn = (np.asarray(X, np.float32) - self.x_mean_) / self.x_scale_
         self.net_.eval()
         with torch.no_grad():
-            p = self.net_(torch.from_numpy(Xn).unsqueeze(1)).squeeze(1).numpy()
+            inputs = torch.from_numpy(Xn).unsqueeze(1).to(self.device)
+            p = self.net_(inputs).squeeze(1).cpu().numpy()
         return p.astype(float) * self.y_scale_ + self.y_mean_

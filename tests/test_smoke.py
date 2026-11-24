@@ -1,10 +1,13 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
-from spectra.synthetic import make_synthetic
+
 from spectra.evaluate import nested_group_cv, run_grid
 from spectra.metrics import regression_metrics
-from spectra.preprocess import get_preprocessor, PREPROCESSORS
+from spectra.preprocess import PREPROCESSORS, get_preprocessor
+from spectra.synthetic import make_synthetic
 
 
 def test_preprocessors_shape():

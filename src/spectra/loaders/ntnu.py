@@ -12,8 +12,8 @@ Validation — отдельно смешанные растворы, отдел�
 Блоки (`block`) — подряд идущие повторы одного (состав, кювета, день, run); `repeat` —
 номер повтора внутри блока.
 """
-from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -23,16 +23,27 @@ from spectra.data import SpectraDataset
 
 RAW = Path(__file__).resolve().parents[3] / "data" / "raw" / "ntnu"
 FILES = {"calibration": "CalibrationData.txt", "validation": "ValidationData.txt"}
-INFO_COLS = {"Glucose (mM)": "glucose", "Lactate (mM)": "lactate", "Acetaminophen (mM)": "acetaminophen",
-             "Caffeine (mM)": "caffeine", "Ethanol (mM)": "ethanol", "Temperature (C)": "temperature",
-             "Kuvette": "cuvette", "Day": "day", "Run": "run"}
+INFO_COLS = {
+    "Glucose (mM)": "glucose",
+    "Lactate (mM)": "lactate",
+    "Acetaminophen (mM)": "acetaminophen",
+    "Caffeine (mM)": "caffeine",
+    "Ethanol (mM)": "ethanol",
+    "Temperature (C)": "temperature",
+    "Kuvette": "cuvette",
+    "Day": "day",
+    "Run": "run",
+}
 CONC_COLS = ["glucose", "lactate", "acetaminophen", "caffeine", "ethanol"]
 
 # рабочие окна: без видимой области, насыщения ~1940 нм и шумного края >2400 нм
 WORK_WINDOWS: list[tuple[float, float]] = [(1100.0, 1880.0), (2050.0, 2400.0)]
 
 # валидация: метка 50 мМ, все модели предсказывают ~25 мМ — вероятная ошибка приготовления/метки в источнике
-SUSPECT_COMPOSITIONS: tuple[str, ...] = ("50.00|15.00|0.15|0.10|34.50", "50.00|15.00|0.15|0.05|69.00")
+SUSPECT_COMPOSITIONS: tuple[str, ...] = (
+    "50.00|15.00|0.15|0.10|34.50",
+    "50.00|15.00|0.15|0.05|69.00",
+)
 
 
 def _read_raw(split: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
@@ -63,7 +74,9 @@ def _add_structure(info: pd.DataFrame, split: str) -> pd.DataFrame:
     return out
 
 
-def _resolve_windows(windows: list[tuple[float, float]] | str | None) -> list[tuple[float, float]] | None:
+def _resolve_windows(
+    windows: Sequence[Sequence[float]] | str | None,
+) -> list[tuple[float, float]] | None:
     """Приводит аргумент windows к списку кортежей (float, float).
 
     "work" — WORK_WINDOWS, другая строка -> ValueError, список списков (напр. из JSON) —
@@ -82,7 +95,7 @@ def load(
     split: str = "calibration",
     wl_min: float | None = None,
     wl_max: float | None = None,
-    windows: list[tuple[float, float]] | str | None = None,
+    windows: Sequence[Sequence[float]] | str | None = None,
     drop_suspect: bool = False,
 ) -> SpectraDataset:
     """Загружает датасет NTNU как SpectraDataset.

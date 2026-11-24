@@ -1,4 +1,5 @@
 """Тесты загрузчика NTNU."""
+
 import pathlib
 import sys
 
@@ -10,7 +11,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 RAW = pathlib.Path(__file__).resolve().parents[1] / "data" / "raw" / "ntnu"
 if not (RAW / "CalibrationData.txt").exists():
-    pytest.skip("Нет данных data/raw/ntnu/ — пропуск тестов загрузчика NTNU", allow_module_level=True)
+    pytest.skip(
+        "Нет данных data/raw/ntnu/ — пропуск тестов загрузчика NTNU", allow_module_level=True
+    )
 
 from spectra.loaders.ntnu import load  # noqa: E402
 

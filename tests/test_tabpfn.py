@@ -1,14 +1,16 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
-import pytest
 import numpy as np
-from spectra.synthetic import make_synthetic
+import pytest
+
 from spectra.metrics import regression_metrics
+from spectra.models import build
+from spectra.synthetic import make_synthetic
 
 pytest.importorskip("tabpfn")
 WEIGHTS = pathlib.Path.home() / ".cache" / "tabpfn" / "tabpfn-v3.5-20260909.safetensors"
-
-from spectra.models import build
 
 
 def test_build_tabpfn():

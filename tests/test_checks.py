@@ -1,8 +1,17 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
+
+from spectra.checks import (
+    external_validation,
+    interferent_exclusion,
+    learning_curve,
+    leave_one_day_out,
+    subset,
+)
 from spectra.synthetic import make_synthetic
-from spectra.checks import subset, external_validation, interferent_exclusion, leave_one_day_out, learning_curve
 
 
 def _pair():

@@ -3,10 +3,9 @@
 Запуск: uv run python scripts/explore_ntnu.py
 Результат: PNG в reports/figures/ + reports/figures/ntnu_outliers.csv.
 """
-from __future__ import annotations
 
-import sys
 import pathlib
+import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
@@ -21,6 +20,7 @@ from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 from sklearn.decomposition import PCA
 
+from spectra.data import SpectraDataset
 from spectra.loaders.ntnu import load
 from spectra.preprocess import SNV
 
@@ -29,7 +29,7 @@ CMAP = plt.get_cmap("viridis")
 NORM = Normalize(0, 50)
 
 
-def _mask(ds, lo: float, hi: float) -> np.ndarray:
+def _mask(ds: SpectraDataset, lo: float, hi: float) -> np.ndarray:
     return (ds.wl >= lo) & (ds.wl <= hi)
 
 
@@ -51,7 +51,16 @@ def plot_spectra_full(ds) -> pathlib.Path:
         ax.axvspan(lo, hi, color="gray", alpha=0.15)
     ax.set_xlabel("длина волны, нм")
     ax.set_ylabel("поглощение, отн. ед.")
-    handles = [Line2D([0], [0], color="gray", alpha=0.4, lw=6, label="сильное поглощение воды / возможное насыщение")]
+    handles = [
+        Line2D(
+            [0],
+            [0],
+            color="gray",
+            alpha=0.4,
+            lw=6,
+            label="сильное поглощение воды / возможное насыщение",
+        )
+    ]
     cb = fig.colorbar(plt.cm.ScalarMappable(cmap=CMAP, norm=NORM), ax=ax)
     cb.set_label("глюкоза, мМ")
     ax.legend(handles=handles, loc="upper right", fontsize=8)
@@ -76,11 +85,9 @@ def plot_spectra_diff(ds) -> pathlib.Path:
 
 def plot_repeats(ds) -> pathlib.Path:
     """Разброс повторов внутри блоков vs разброс между блоками."""
-    cal = ds.meta["set"].to_numpy() == "calibration"
     m = _mask(ds, 1100, 2400)
     X_sub = ds.X[:, m]
     meta = ds.meta.loc[ds.meta["set"] == "calibration"]
-    idx = np.flatnonzero(cal)
     block_means = []
     block_stds = []
     for b, grp in meta.groupby("block"):
@@ -120,8 +127,10 @@ def plot_drift(ds) -> pathlib.Path:
     ax1.set_ylabel("среднее поглощение\n1100–1300 нм, отн. ед.")
     ax2.set_xlabel("порядковый номер спектра")
     ax2.set_ylabel("температура, °C")
-    handles = [Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=6, label=f"день {d}")
-               for d, c in colors.items()]
+    handles = [
+        Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=6, label=f"день {d}")
+        for d, c in colors.items()
+    ]
     ax1.legend(handles=handles, fontsize=8, loc="upper left", ncols=3)
     return _save(fig, "ntnu_drift.png")
 
@@ -147,7 +156,9 @@ def plot_pca(ds) -> pathlib.Path:
     for d in uniq_days:
         sel = days == d
         marker = "o" if cal[sel][0] else "^"
-        ax.scatter(scores[sel, 0], scores[sel, 1], c=[colors[d]], marker=marker, s=14, label=f"день {d}")
+        ax.scatter(
+            scores[sel, 0], scores[sel, 1], c=[colors[d]], marker=marker, s=14, label=f"день {d}"
+        )
     ax.set_xlabel(f"PC1, {evr[0]:.1f}%")
     ax.set_ylabel(f"PC2, {evr[1]:.1f}%")
     ax.legend(fontsize=8)
@@ -165,19 +176,25 @@ def find_outliers(ds) -> tuple[pathlib.Path, pd.DataFrame]:
     med = np.median(q_cal)
     mad = np.median(np.abs(q_cal - med))
     threshold = med + 5 * mad
-    out = pd.DataFrame({
-        "idx": np.arange(len(ds)),
-        "set": ds.meta["set"],
-        "block": ds.meta["block"],
-        "repeat": ds.meta["repeat"],
-        "glucose": ds.y,
-        "day": ds.meta["day"],
-        "run": ds.meta["run"],
-        "cuvette": ds.meta["cuvette"],
-        "temperature": ds.meta["temperature"],
-        "q": q,
-        "is_outlier": q > threshold,
-    }).sort_values("q", ascending=False).reset_index(drop=True)
+    out = (
+        pd.DataFrame(
+            {
+                "idx": np.arange(len(ds)),
+                "set": ds.meta["set"],
+                "block": ds.meta["block"],
+                "repeat": ds.meta["repeat"],
+                "glucose": ds.y,
+                "day": ds.meta["day"],
+                "run": ds.meta["run"],
+                "cuvette": ds.meta["cuvette"],
+                "temperature": ds.meta["temperature"],
+                "q": q,
+                "is_outlier": q > threshold,
+            }
+        )
+        .sort_values("q", ascending=False)
+        .reset_index(drop=True)
+    )
     path = OUT / "ntnu_outliers.csv"
     out.to_csv(path, index=False)
     print(f"порог q = {threshold:.4g} (медиана калибровки {med:.4g} + 5*MAD {mad:.4g})")

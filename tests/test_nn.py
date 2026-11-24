@@ -1,11 +1,14 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
 import pytest
 from sklearn.base import clone
-from spectra.synthetic import make_synthetic
+
 from spectra.metrics import regression_metrics
 from spectra.models import build
+from spectra.synthetic import make_synthetic
 
 torch = pytest.importorskip("torch")
 from spectra.nn import CNN1DRegressor  # noqa: E402 — только после проверки torch

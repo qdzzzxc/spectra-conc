@@ -5,8 +5,10 @@
   - что является целевой концентрацией y (и в каких единицах);
   - какие мета-поля нужны для проверок (партия, день, температура, концентрации мешающих веществ).
 """
+
 from pathlib import Path
-from spectra.data import SpectraDataset, load_wide_csv
+
+from spectra.data import SpectraDataset
 
 RAW = Path(__file__).resolve().parents[3] / "data" / "raw"
 
